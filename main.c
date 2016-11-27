@@ -35,7 +35,7 @@ void decrease_backoff_times(struct station * stations);
 void request_to_send(struct station * stations, struct medium * network_medium);
 int create_backoff_time();
 void pause();
-void print_collision(int requesting [], struct station * stations, char * message);
+void print_and_fix_collision(int requesting [], struct station * stations);
 void print_divider();
 void print_cannot_request(struct station stations[], int requesting[]);
 void print_packets_sent(struct medium network_medium);
@@ -53,7 +53,7 @@ int main() {
     request_to_send(stations, &network_medium);
     
     print_divider();
-    //pause();
+    pause();
     program_time++;
   }
 
@@ -133,7 +133,7 @@ void request_to_send(struct station * stations, struct medium * network_medium){
     network_medium->total_packets_delivered++;
   } else if (is_idle && requesting_count > 1){ // if we can send but more than 1 wants to send
     network_medium->collision_count++;
-    print_collision(requesting, stations, "tried to transmit at the same time, they get new backoff counters");
+    print_and_fix_collision(requesting, stations);
   } else if (is_idle){ // we cannot send
     printf("\n nobody wants to send at the moment\n\n");
   } else if (!is_idle && requesting_count > 0){
@@ -161,7 +161,7 @@ void pause(){
   getchar();
 }
 
-void print_collision(int requesting [], struct station * stations, char * message){
+void print_and_fix_collision(int requesting [], struct station * stations){
     printf("\n !!! there has been a collision, stations: ");
     for (int i=0;i<STATION_COUNT;i++){
       if (requesting[i]){
@@ -169,7 +169,8 @@ void print_collision(int requesting [], struct station * stations, char * messag
         stations[i].backoff_time = create_backoff_time();
       }
     }
-    printf(" %s !!!\n\n", message);
+    contention_window_size *= 2;
+    printf(" tried to transmit at the same time, they get new backoff counters and the contention window size is increased to %d\n\n", contention_window_size);
 }
 
 void print_divider(){
@@ -177,7 +178,7 @@ void print_divider(){
 }
 
 void print_cannot_request(struct station stations[], int requesting[]){
-      printf("\n !!! stations ");
+    printf("\n !!! stations ");
     for (int i=0;i<STATION_COUNT;i++){
       if (requesting[i]){
         printf("%d,", i);
