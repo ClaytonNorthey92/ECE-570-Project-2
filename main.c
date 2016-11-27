@@ -10,7 +10,7 @@
 #define MAX_PACKET_SIZE 2347
 #define SENDING -1
 #define DATA_RATE 500 // 500 bits/s <-- very slow, but good for proof of concept
-#define TOTAL_TIME 100000
+#define TOTAL_TIME 10000
 
 int contention_window_size = INITIAL_CONTENTION_WINDOW;
 
@@ -47,9 +47,7 @@ int main() {
 
   int program_time = 0;
   while (program_time < TOTAL_TIME){
-    printf("-----\nTotal Program Time: %d \n", program_time);
-    printf("Total Transmission Time: %d\n", network_medium.total_time_transmitting);
-    printf("Total bits sent: %d giving a throughput of %f bits/second\n", network_medium.total_bits_sent, ((double)network_medium.total_bits_sent)/program_time);
+    printf("-----\nCurrent Program Time: %d \n", program_time);
     printf("-----\n");
     
     decrease_backoff_times(stations);
@@ -60,7 +58,10 @@ int main() {
     program_time++;
   }
 
-  printf("%d collisions occured\n", network_medium.collision_count);
+  printf("\nTotal Program Time: %d\n", program_time);
+  printf("Total Transmission Time: %d\n", network_medium.total_time_transmitting);
+  printf("Total bits sent: %d giving a throughput of %f bits/second\n", network_medium.total_bits_sent, ((double)network_medium.total_bits_sent)/program_time);
+  printf("%d collisions occured with probability of %f\n", network_medium.collision_count, ((double)network_medium.collision_count)/program_time);
   print_packets_sent(network_medium);
   return 0;
 }
@@ -190,6 +191,7 @@ void print_cannot_request(struct station stations[], int requesting[]){
 void print_packets_sent(struct medium network_medium){
   printf("total packets sent: %d\n", network_medium.total_packets_delivered);
   for (int i=0;i<STATION_COUNT;i++){
-    printf("station %d sent %d packets\n", i, network_medium.packets_per_station[i]);
+    printf("station %d sent %d packets, which is %f%% of total\n", i, network_medium.packets_per_station[i],
+           ((double)network_medium.packets_per_station[i])/network_medium.total_packets_delivered*100);
   }
 }
