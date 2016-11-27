@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define TIME_SLOT 0.2
 #define STATION_COUNT 8
 #define INITIAL_CONTENTION_WINDOW 31
 #define ACK 14*8 // 14 bytes
