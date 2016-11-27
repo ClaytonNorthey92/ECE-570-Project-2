@@ -53,13 +53,15 @@ int main() {
     request_to_send(stations, &network_medium);
     
     print_divider();
-    pause();
+    //pause();
     program_time++;
   }
 
   printf("\nTotal Program Time: %d\n", program_time);
   printf("Total Transmission Time: %d\n", network_medium.total_time_transmitting);
-  printf("Total bits sent: %d giving a throughput of %f bits/second\n", network_medium.total_bits_sent, ((double)network_medium.total_bits_sent)/program_time);
+  float throughput = ((double)network_medium.total_bits_sent)/program_time;
+  printf("Total bits sent: %d giving a throughput of %f bits/second which is %f%% of data rate\n",
+         network_medium.total_bits_sent, throughput, throughput/DATA_RATE * 100);
   printf("%d collisions occured with probability of %f\n", network_medium.collision_count, ((double)network_medium.collision_count)/program_time);
   print_packets_sent(network_medium);
   return 0;
