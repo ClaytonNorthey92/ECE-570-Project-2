@@ -10,10 +10,14 @@
 #define SENDING -1
 #define DATA_RATE 500 // 500 bits/s <-- very slow, but good for proof of concept
 #define TOTAL_TIME 10000
+// SIFS is 10 time units, DIFS is slightly longer than SIFS, 2 time units more
+#define SIFS 10
+#define DIFS 2+SIFS
 
 int contention_window_size = INITIAL_CONTENTION_WINDOW;
 
 struct station {
+  // if backoff_time==-1, then station is currently sending
   int backoff_time;
 };
 
@@ -25,7 +29,7 @@ struct medium {
   int collision_count;
   int total_bits_sent;
   int total_packets_delivered;
-  int packets_per_station [8];
+  int packets_per_station [STATION_COUNT];
 };
 
 struct station * create_stations();
@@ -37,7 +41,7 @@ int create_backoff_time();
 void pause();
 void print_and_fix_collision(int requesting [], struct station * stations);
 void print_divider();
-void print_cannot_request(struct station stations[], int requesting[]);
+void new_backoff_and_print_cannot_request(struct station stations[], int requesting[]);
 void print_packets_sent(struct medium network_medium);
 
 int main() {
@@ -62,7 +66,7 @@ int main() {
   float throughput = ((double)network_medium.total_bits_sent)/program_time;
   printf("Total bits sent: %d giving a throughput of %f bits/second which is %f%% of data rate\n",
          network_medium.total_bits_sent, throughput, throughput/DATA_RATE * 100);
-  printf("%d collisions occured with probability of %f\n", network_medium.collision_count, ((double)network_medium.collision_count)/program_time);
+  printf("%d collisions occurred with probability of %f\n", network_medium.collision_count, ((double)network_medium.collision_count)/program_time);
   print_packets_sent(network_medium);
   return 0;
 }
@@ -122,7 +126,9 @@ void request_to_send(struct station * stations, struct medium * network_medium){
   if (is_idle && requesting_count==1){ // if we can send and only 1 wants to send
     printf("\n !!! station %d won the channel and is able to send !!! \n\n", requesting_station);
     stations[requesting_station].backoff_time = SENDING;
-    int total_data_to_send = rand()%MAX_PACKET_SIZE + RTS + CTS + ACK;
+    // below, the SIFS and DIFS are left explicitly repeated on purpose, to show they are the time period
+    // between the frames
+    int total_data_to_send = DIFS + rand()%MAX_PACKET_SIZE + SIFS + RTS + SIFS + CTS + SIFS + ACK + DIFS;
     network_medium->total_bits_sent += total_data_to_send;
     int sending_time = total_data_to_send / DATA_RATE;
     if (total_data_to_send % DATA_RATE != 0){
@@ -139,7 +145,7 @@ void request_to_send(struct station * stations, struct medium * network_medium){
   } else if (is_idle){ // we cannot send
     printf("\n nobody wants to send at the moment\n\n");
   } else if (!is_idle && requesting_count > 0){
-    print_cannot_request(stations, requesting);
+    new_backoff_and_print_cannot_request(stations, requesting);
   }
 
   is_idle = is_medium_idle(*network_medium);
@@ -179,7 +185,7 @@ void print_divider(){
   printf("\n----------------------------------------------------------------------------------------------------------------\n");
 }
 
-void print_cannot_request(struct station stations[], int requesting[]){
+void new_backoff_and_print_cannot_request(struct station stations[], int requesting[]){
     printf("\n !!! stations ");
     for (int i=0;i<STATION_COUNT;i++){
       if (requesting[i]){
