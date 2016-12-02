@@ -2,8 +2,8 @@
 #include <stdlib.h>
 
 #define PI 3.14159265358979323846
-#define SIFS 10
-#define SLOT 20
+#define SIFS 1
+#define SLOT 1
 #define DIFS 2 * SLOT + SIFS
 #define DATA_RATE 12
 #define BIT_DURATION 1/DATA_RATE
@@ -15,8 +15,8 @@
 #define MAX_PACKET_SIZE 100*8*BIT_DURATION
 #define BIT 1
 #define MIN_STATIONS 8
-#define MAX_STATIONS 20
-#define PROGRAM_TIME 100000
+#define MAX_STATIONS 50
+#define PROGRAM_TIME 10000
 
 
 int * get_data_array(int size, int data);
@@ -50,14 +50,14 @@ struct channel {
 int main(){
     struct program_variables shared = init_program();
     struct channel * medium = init_channel();
-    int stations,
-        collision_count = 0,
-        total_time_sending = 0,
-        successful_send_count = 0;
+    int stations;
     // run program for number of stations 8 --> 999
     // to get metrics
     for (stations=MIN_STATIONS;stations<MAX_STATIONS;stations++){
         
+        int collision_count = 0,
+            total_time_sending = 0,
+            successful_send_count = 0;
         // initialize stations with a initial contention window
         // and initial backoff counter
         struct station * active_stations = init_stations(stations);
@@ -69,9 +69,7 @@ int main(){
             // returns 1 if collision, 0 if no collision
             int collision = decrease_backoff_counters(active_stations, stations, medium->idle);
             if (medium->send_time_remaining){
-                medium->send_time_remaining--;
-                printf("station currently sending packet, time remaining in transmission: %d\n", medium->send_time_remaining);
-
+                medium->send_time_remaining-=SLOT;
                 if (!medium->send_time_remaining){
                     medium->idle = 1;
                     int i;
@@ -87,7 +85,6 @@ int main(){
             }
             if (collision){
                 collision_count++;
-                printf("A collision has occurred, contention windows are increased for coliding stations and new backoff counters are assigned.\n");
             } else {
                 // if no senders, will return 0, else will set a station to sending and set the medium to no longer idle
                 // for the duration of the packet sending
@@ -104,11 +101,16 @@ int main(){
         }
 
 
+        printf("\n--- for %d stations ---\n", stations);
+        printf("there were %d collisions, %d successful transmissions, %f%% was the total time spent sending\n", collision_count, successful_send_count, ((double)total_time_sending)/PROGRAM_TIME*100);
+        int s;
+        for (s=0;s<stations;s++){
+            printf("station #%d sent %d packets, which is %f%% of total\n", s, active_stations[s].total_packets_sent, ((double)active_stations[s].total_packets_sent)/successful_send_count*100);
+        }
         // free memory that the active_stations pointer
         // was referencing
         free(active_stations);
     }
-    printf("there were %d collisions, %d successful transmissions, %d was the total time spent sending\n", collision_count, successful_send_count, total_time_sending);
     return 0;
 }
 
@@ -153,8 +155,7 @@ int decrease_backoff_counters(struct station * stations, int station_count, int 
         i;
     for(i=0;i<station_count;i++){
         if (stations[i].backoff_counter > 0) // if not currently sending
-            stations[i].backoff_counter--;
-        printf("Station #%d backoff counter: %d\n", i, stations[i].backoff_counter);
+            stations[i].backoff_counter-=SLOT;
         if (!stations[i].backoff_counter){
             requesting_to_send[i] = 1;
             number_requesting++;
@@ -165,6 +166,7 @@ int decrease_backoff_counters(struct station * stations, int station_count, int 
     // if idle and more than one station wants to send
     int collision_occured = number_requesting > 1 && idle_status;
     
+    int cannot_send = number_requesting > 0 && !idle_status;
     // if collision has occurred we need to increase the contention window
     // for the stations that are colliding, we then set new backoff counters
     // for each
@@ -172,11 +174,22 @@ int decrease_backoff_counters(struct station * stations, int station_count, int 
         for (i=0;i<station_count;i++){
             if (requesting_to_send[i]){
                 stations[i].contention_window = (stations[i].contention_window + 1) * 2 - 1;
+                if (stations[i].contention_window > MAX_CONTENTION_WINDOW)
+                    stations[i].contention_window = MAX_CONTENTION_WINDOW;
                 stations[i].backoff_counter = rand()%stations[i].contention_window;
                 stations[i].collisions_in_a_row++;
             }
         }
     }
+
+    if (cannot_send){
+        for (i=0;i<station_count;i++){
+            if (requesting_to_send[i]){
+                stations[i].backoff_counter = rand()%stations[i].contention_window;
+            }
+        }   
+    }
+
     free(requesting_to_send);
 
     // if more than one requesting, a collision has occured
