@@ -14,11 +14,10 @@
 #define SIFS 10
 #define DIFS 2+SIFS
 
-int contention_window_size = INITIAL_CONTENTION_WINDOW;
-
 struct station {
   // if backoff_time==-1, then station is currently sending
   int backoff_time;
+  int contention_window;
 };
 
 struct medium {
@@ -37,7 +36,7 @@ struct medium create_medium();
 int is_medium_idle(struct medium medium_to_check);
 void decrease_backoff_times(struct station * stations);
 void request_to_send(struct station * stations, struct medium * network_medium);
-int create_backoff_time();
+int create_backoff_time(int contention_window);
 void pause();
 void print_and_fix_collision(int requesting [], struct station * stations);
 void print_divider();
@@ -75,7 +74,8 @@ struct station * create_stations(){
   static struct station stations [STATION_COUNT];
 
   for (int i=0;i<STATION_COUNT;i++){
-    stations[i].backoff_time = create_backoff_time();
+    stations[i].contention_window = INITIAL_CONTENTION_WINDOW;
+    stations[i].backoff_time = create_backoff_time(stations[i].contention_window);
   }
 
   return stations;
@@ -161,8 +161,8 @@ void request_to_send(struct station * stations, struct medium * network_medium){
 
 }
 
-int create_backoff_time(){
-  return (rand()%contention_window_size) + 1;
+int create_backoff_time(int contention_window){
+  return (rand()%contention_window) + 1;
 }
 
 void pause(){
