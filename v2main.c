@@ -14,9 +14,10 @@
 #define ACK_SIZE CTS_SIZE
 #define MAX_PACKET_SIZE 100*8*BIT_DURATION
 #define BIT 1
-#define MIN_STATIONS 8
+#define MIN_STATIONS 1
 #define MAX_STATIONS 50
-#define PROGRAM_TIME 10000
+#define PROGRAM_TIME 1000000
+#define FILENAME "output_file.txt"
 
 
 int * get_data_array(int size, int data);
@@ -51,7 +52,11 @@ int main(){
     struct program_variables shared = init_program();
     struct channel * medium = init_channel();
     int stations;
-    // run program for number of stations 8 --> 999
+    //overwrite file if exists
+    FILE * my_file;
+    my_file = fopen(FILENAME, "w");
+    fprintf(my_file, "0 0\n");
+    fclose(my_file);
     // to get metrics
     for (stations=MIN_STATIONS;stations<MAX_STATIONS;stations++){
         
@@ -101,7 +106,11 @@ int main(){
         }
 
 
+        // append to file
+        my_file = fopen(FILENAME, "a");
+        fprintf(my_file, "%d %f\n", stations, ((double)total_time_sending/PROGRAM_TIME));
         printf("\n--- for %d stations ---\n", stations);
+        fclose(my_file);
         printf("there were %d collisions, %d successful transmissions, %f%% was the total time spent sending\n", collision_count, successful_send_count, ((double)total_time_sending)/PROGRAM_TIME*100);
         int s;
         for (s=0;s<stations;s++){
@@ -111,6 +120,7 @@ int main(){
         // was referencing
         free(active_stations);
     }
+    system("gnuplot -e \"plot 'output_file.txt' with linespoints;pause -1\"");
     return 0;
 }
 
