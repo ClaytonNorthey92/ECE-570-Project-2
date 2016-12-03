@@ -127,9 +127,11 @@ int main(){
         // was referencing
         free(active_stations);
     }
-    system("gnuplot -e \"plot 'output_file.txt' using 2 title 'Throughput' with linespoints,\
+    system("gnuplot -e \"     set xlabel '# of Stations';\
+                              set ylabel 'Ratio';\
+                              plot 'output_file.txt' using 2 title 'Throughput' with linespoints,\
                               'output_file.txt' using 3 title 'Collision Probability' with linespoints,\
-                              'output_file.txt' using 4 title 'Variance of %% of packets sent' with linespoints;pause -1\"");
+                              'output_file.txt' using 4 title 'Variance of \% of packets sent' with linespoints;pause -1\"");
     return 0;
 }
 
