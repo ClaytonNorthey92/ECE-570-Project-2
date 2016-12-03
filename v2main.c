@@ -2,8 +2,9 @@
 #include <stdlib.h>
 
 #define PI 3.14159265358979323846
-#define SIFS 1
+// keep SLOT == 1 for simplicity
 #define SLOT 1
+#define SIFS SLOT
 #define DIFS 2 * SLOT + SIFS
 #define DATA_RATE 12
 #define BIT_DURATION 1/DATA_RATE
@@ -81,7 +82,7 @@ int main(){
                     for (i=0;i<stations;i++){
                         if (active_stations[i].backoff_counter == -1){
                             active_stations[i].contention_window = INITIAL_CONTENTION_WINDOW;
-                            active_stations[i].backoff_counter = rand()%active_stations[i].contention_window;
+                            active_stations[i].backoff_counter = SLOT*rand()%active_stations[i].contention_window;
                             active_stations[i].collisions_in_a_row = 0;
                         }
                     }
@@ -148,7 +149,7 @@ struct station * init_stations (int station_count){
     int i;
     for(i=0;i<station_count;i++){
         struct station tmp_station = {
-            .backoff_counter = rand()%INITIAL_CONTENTION_WINDOW + 1,
+            .backoff_counter = SLOT*rand()%INITIAL_CONTENTION_WINDOW + 1,
             .contention_window = INITIAL_CONTENTION_WINDOW,
             .collisions_in_a_row = 0,
             .total_packets_sent = 0
@@ -186,7 +187,7 @@ int decrease_backoff_counters(struct station * stations, int station_count, int 
                 stations[i].contention_window = (stations[i].contention_window + 1) * 2 - 1;
                 if (stations[i].contention_window > MAX_CONTENTION_WINDOW)
                     stations[i].contention_window = MAX_CONTENTION_WINDOW;
-                stations[i].backoff_counter = rand()%stations[i].contention_window;
+                stations[i].backoff_counter = SLOT*rand()%stations[i].contention_window;
                 stations[i].collisions_in_a_row++;
             }
         }
@@ -195,7 +196,7 @@ int decrease_backoff_counters(struct station * stations, int station_count, int 
     if (cannot_send){
         for (i=0;i<station_count;i++){
             if (requesting_to_send[i]){
-                stations[i].backoff_counter = rand()%stations[i].contention_window;
+                stations[i].backoff_counter = SLOT*rand()%stations[i].contention_window;
             }
         }   
     }
@@ -221,7 +222,7 @@ int check_and_send_packet(struct station * stations, int station_count, int idle
             if (!idle_status){
                 // if channel is not idle, increase backoff counter without setting new contention
                 // window size
-                stations[i].backoff_counter = rand()%stations[i].contention_window;
+                stations[i].backoff_counter = SLOT*rand()%stations[i].contention_window;
             } else {
                 // -1 means sending
                 stations[i].backoff_counter = -1;
