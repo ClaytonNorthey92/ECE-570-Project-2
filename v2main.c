@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -56,7 +57,7 @@ int main(){
     //overwrite file if exists
     FILE * my_file;
     my_file = fopen(FILENAME, "w");
-    fprintf(my_file, "0 0 0\n");
+    fprintf(my_file, "0 0 0 0\n");
     fclose(my_file);
     // to get metrics
     for (stations=MIN_STATIONS;stations<MAX_STATIONS;stations++){
@@ -108,22 +109,27 @@ int main(){
 
 
         // append to file
-        my_file = fopen(FILENAME, "a");
-        fprintf(my_file, "%d %f %f\n", stations, ((double)total_time_sending/PROGRAM_TIME), ((double)collision_count)/successful_send_count);
         printf("\n--- for %d stations ---\n", stations);
-        fclose(my_file);
         printf("there were %d collisions, %d successful transmissions, %f%% was the total time spent sending\n", collision_count, successful_send_count, ((double)total_time_sending)/PROGRAM_TIME*100);
         int s;
-        int mean = 100.0/stations;
+        float mean = 100.0/stations;
+        float variance = 0;
         for (s=0;s<stations;s++){
-            printf("station #%d sent %d packets, which is %f%% of total\n", s, active_stations[s].total_packets_sent, ((double)active_stations[s].total_packets_sent)/successful_send_count*100);
+            float percentage_sent = ((double)active_stations[s].total_packets_sent)/successful_send_count*100;
+            float this_variance = pow(percentage_sent - mean, 2)/stations;
+            variance += this_variance;
+            printf("station #%d sent %d packets, which is %f%% of total\n", s, active_stations[s].total_packets_sent, percentage_sent);
         }
+        my_file = fopen(FILENAME, "a");
+        fprintf(my_file, "%d %f %f %f\n", stations, ((double)total_time_sending/PROGRAM_TIME), ((double)collision_count)/successful_send_count, variance);
+        fclose(my_file);
         // free memory that the active_stations pointer
         // was referencing
         free(active_stations);
     }
     system("gnuplot -e \"plot 'output_file.txt' using 2 title 'Throughput' with linespoints,\
-                              'output_file.txt' using 3 title 'Collision Probability' with linespoints;pause -1\"");
+                              'output_file.txt' using 3 title 'Collision Probability' with linespoints,\
+                              'output_file.txt' using 4 title 'Variance of %% of packets sent' with linespoints;pause -1\"");
     return 0;
 }
 
